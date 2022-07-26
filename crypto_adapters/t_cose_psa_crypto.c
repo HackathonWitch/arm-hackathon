@@ -269,6 +269,12 @@ t_cose_crypto_encrypt(int32_t                cose_algorithm_id,
         key_bitlen = 128;
         break;
 
+    case COSE_ALGORITHM_A192GCM:
+        psa_algorithm = PSA_ALG_GCM;
+        psa_keytype = PSA_KEY_TYPE_AES;
+        key_bitlen = 192;
+        break;
+
     case COSE_ALGORITHM_A256GCM:
         psa_algorithm = PSA_ALG_GCM;
         psa_keytype = PSA_KEY_TYPE_AES;
@@ -453,6 +459,12 @@ t_cose_crypto_get_cose_key(int32_t              cose_algorithm_id,
         psa_keytype = PSA_KEY_TYPE_AES;
         break;
 
+    case COSE_ALGORITHM_A192GCM:
+        key_bitlen = 192;
+        psa_algorithm = PSA_ALG_GCM;
+        psa_keytype = PSA_KEY_TYPE_AES;
+        break;
+
     case COSE_ALGORITHM_A256GCM:
         key_bitlen = 256;
         psa_algorithm = PSA_ALG_GCM;
@@ -501,9 +513,7 @@ t_cose_crypto_decrypt(int32_t                cose_algorithm_id,
     /* Set decryption algorithm information */
     switch (cose_algorithm_id) {
     case COSE_ALGORITHM_A128GCM:
-        psa_algorithm = PSA_ALG_GCM;
-        break;
-
+    case COSE_ALGORITHM_A192GCM:
     case COSE_ALGORITHM_A256GCM:
         psa_algorithm = PSA_ALG_GCM;
         break;

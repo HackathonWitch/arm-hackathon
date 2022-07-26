@@ -44,6 +44,9 @@ t_cose_encrypt_enc_detached(struct t_cose_encrypt_enc_ctx* context,
     case COSE_ALGORITHM_A128GCM:
         key_bitlen = 128;
         break;
+    case COSE_ALGORITHM_A192GCM:
+        key_bitlen = 192;
+        break;
     case COSE_ALGORITHM_A256GCM:
         key_bitlen = 256;
         break;
@@ -218,6 +221,9 @@ t_cose_encrypt_enc(struct t_cose_encrypt_enc_ctx* context,
     switch(context->cose_algorithm_id) {
     case COSE_ALGORITHM_A128GCM:
         key_bitlen = 128;
+        break;
+    case COSE_ALGORITHM_A192GCM:
+        key_bitlen = 192;
         break;
     case COSE_ALGORITHM_A256GCM:
         key_bitlen = 256;
