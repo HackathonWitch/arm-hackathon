@@ -1,4 +1,12 @@
-#  t_cose
+#  Team 0xCOFF33: Support of New Encryption Algorithms to the t_cose Library
+
+Our project, product of our participation in the Arm Summer Programme Hackathon 2022, adds on the algorithms available in the t_cose library. We have added support for a few AES-CCM and AES-GCM algorithms for encryption.
+
+See the t_cose README below.
+
+
+
+
 
 t_cose implements COSE_Sign1 of [COSE, RFC 8152]
 (https://tools.ietf.org/html/rfc8152).
