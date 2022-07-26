@@ -42,17 +42,43 @@ t_cose_encrypt_enc_detached(struct t_cose_encrypt_enc_ctx* context,
     /* Determine algorithm parameters */
     switch(context->cose_algorithm_id) {
     case COSE_ALGORITHM_A128GCM:
+    case COSE_ALGORITHM_AES128CCM_16_128:
+    case COSE_ALGORITHM_AES128CCM_64_128:
         key_bitlen = 128;
         break;
     case COSE_ALGORITHM_A192GCM:
         key_bitlen = 192;
         break;
     case COSE_ALGORITHM_A256GCM:
+    case COSE_ALGORITHM_AES256CCM_16_128:
+    case COSE_ALGORITHM_AES256CCM_64_128:
         key_bitlen = 256;
         break;
     default:
         /* Unsupported algorithm */
         return(T_COSE_ERR_UNSUPPORTED_CIPHER_ALG);
+    }
+
+    /* Determine nonce lengths */
+    switch(context->cose_algorithm_id) {
+    case COSE_ALGORITHM_A128GCM:
+    case COSE_ALGORITHM_A192GCM:
+    case COSE_ALGORITHM_A256GCM:
+        /* 96 bits */
+        nonce.len = 12;
+        break;
+    case COSE_ALGORITHM_AES128CCM_16_128:
+    case COSE_ALGORITHM_AES256CCM_16_128:
+        nonce.len = 13;
+        break;
+    case COSE_ALGORITHM_AES128CCM_64_128:
+    case COSE_ALGORITHM_AES256CCM_64_128:
+        nonce.len = 7;
+        break;
+
+    default:
+        nonce.len = key_bitlen / 8;
+        break;
     }
 
     if (context->option_flags == T_COSE_OPT_COSE_ENCRYPT0) {
@@ -83,7 +109,6 @@ t_cose_encrypt_enc_detached(struct t_cose_encrypt_enc_ctx* context,
     QCBOREncode_OpenMap(encrypt_ctx);
 
     /* Generate random nonce */
-    nonce.len = key_bitlen / 8;
     nonce.ptr = context->nonce;
 
     cose_result = t_cose_crypto_get_random(nonce);
@@ -95,7 +120,7 @@ t_cose_encrypt_enc_detached(struct t_cose_encrypt_enc_ctx* context,
     QCBOREncode_AddBytesToMapN(encrypt_ctx,
                                COSE_HEADER_PARAM_IV,
                                (struct q_useful_buf_c) {
-                                    .len = key_bitlen / 8,
+                                    .len = nonce.len,
                                     .ptr = context->nonce}
                               );
 
@@ -181,7 +206,7 @@ t_cose_encrypt_enc_detached(struct t_cose_encrypt_enc_ctx* context,
                        (struct q_useful_buf_c)
                        {
                           .ptr = context->nonce,
-                          .len = key_bitlen / 8
+                          .len = nonce.len
                        },
                        add_data_buf,
                        detached_payload,
@@ -220,16 +245,42 @@ t_cose_encrypt_enc(struct t_cose_encrypt_enc_ctx* context,
     /* Determine algorithm parameters */
     switch(context->cose_algorithm_id) {
     case COSE_ALGORITHM_A128GCM:
+    case COSE_ALGORITHM_AES128CCM_16_128:
+    case COSE_ALGORITHM_AES128CCM_64_128:
         key_bitlen = 128;
         break;
     case COSE_ALGORITHM_A192GCM:
         key_bitlen = 192;
         break;
     case COSE_ALGORITHM_A256GCM:
+    case COSE_ALGORITHM_AES256CCM_16_128:
+    case COSE_ALGORITHM_AES256CCM_64_128:
         key_bitlen = 256;
         break;
     default:
         return(T_COSE_ERR_UNSUPPORTED_CIPHER_ALG);
+    }
+
+    /* Determine nonce lengths */
+    switch(context->cose_algorithm_id) {
+    case COSE_ALGORITHM_A128GCM:
+    case COSE_ALGORITHM_A192GCM:
+    case COSE_ALGORITHM_A256GCM:
+        /* 96 bits */
+        nonce.len = 12;
+        break;
+    case COSE_ALGORITHM_AES128CCM_16_128:
+    case COSE_ALGORITHM_AES256CCM_16_128:
+        nonce.len = 13;
+        break;
+    case COSE_ALGORITHM_AES128CCM_64_128:
+    case COSE_ALGORITHM_AES256CCM_64_128:
+        nonce.len = 7;
+        break;
+
+    default:
+        nonce.len = key_bitlen / 8;
+        break;
     }
 
     /* Add the CBOR tag */
@@ -259,7 +310,6 @@ t_cose_encrypt_enc(struct t_cose_encrypt_enc_ctx* context,
     QCBOREncode_OpenMap(encrypt_ctx);
 
     /* Generate nonce */
-    nonce.len = key_bitlen / 8;
     nonce.ptr = context->nonce;
 
     cose_result = t_cose_crypto_get_random(nonce);
@@ -359,7 +409,7 @@ t_cose_encrypt_enc(struct t_cose_encrypt_enc_ctx* context,
                        (struct q_useful_buf_c)
                        {
                           .ptr = context->nonce,
-                          .len = key_bitlen / 8
+                          .len = nonce.len
                        },
                        add_data_buf,
                        payload,

@@ -262,6 +262,20 @@
 #define COSE_ALGORITHM_AES256CCM_16_128 31
 
 /**
+ * \def COSE_ALGORITHM_AES128CCM_64_128
+ *
+ * \brief AES-CCM mode 128-bit key, 128-bit tag, 7-byte nonce
+ */
+#define COSE_ALGORITHM_AES128CCM_64_128 32
+
+/**
+ * \def COSE_ALGORITHM_AES256CCM_64_128
+ *
+ * \brief AES-CCM mode 256-bit key, 128-bit tag, 7-byte nonce
+ */
+#define COSE_ALGORITHM_AES256CCM_64_128 33
+
+/**
  * \def COSE_ALGORITHM_HPKE_P256_HKDF256_AES128_GCM
  *
  * \brief HPKE/P-256+HKDF-256 and AES-128-GCM

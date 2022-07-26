@@ -281,6 +281,20 @@ t_cose_crypto_encrypt(int32_t                cose_algorithm_id,
         key_bitlen = 256;
         break;
 
+    case COSE_ALGORITHM_AES128CCM_16_128:
+    case COSE_ALGORITHM_AES128CCM_64_128:
+        psa_algorithm = PSA_ALG_CCM;
+        psa_keytype = PSA_KEY_TYPE_AES;
+        key_bitlen = 128;
+        break;
+
+    case COSE_ALGORITHM_AES256CCM_16_128:
+    case COSE_ALGORITHM_AES256CCM_64_128:
+        psa_algorithm = PSA_ALG_CCM;
+        psa_keytype = PSA_KEY_TYPE_AES;
+        key_bitlen = 256;
+        break;
+
     default:
         return(T_COSE_ERR_UNSUPPORTED_CIPHER_ALG);
     }
@@ -310,7 +324,6 @@ t_cose_crypto_encrypt(int32_t                cose_algorithm_id,
               ciphertext_buffer.ptr,          // ciphertext
               ciphertext_buffer.len,          // ciphertext length
               ciphertext_output_len );        // length of output
-
 
     if (status != PSA_SUCCESS) {
         return(T_COSE_ERR_ENCRYPT_FAIL);
@@ -471,6 +484,20 @@ t_cose_crypto_get_cose_key(int32_t              cose_algorithm_id,
         psa_keytype = PSA_KEY_TYPE_AES;
         break;
 
+    case COSE_ALGORITHM_AES128CCM_16_128:
+    case COSE_ALGORITHM_AES128CCM_64_128:
+        key_bitlen = 128;
+        psa_algorithm = PSA_ALG_CCM;
+        psa_keytype = PSA_KEY_TYPE_AES;
+        break;
+
+    case COSE_ALGORITHM_AES256CCM_16_128:
+    case COSE_ALGORITHM_AES256CCM_64_128:
+        key_bitlen = 256;
+        psa_algorithm = PSA_ALG_CCM;
+        psa_keytype = PSA_KEY_TYPE_AES;
+        break;
+
     default:
         return(T_COSE_ERR_UNSUPPORTED_CIPHER_ALG);
     }
@@ -516,6 +543,13 @@ t_cose_crypto_decrypt(int32_t                cose_algorithm_id,
     case COSE_ALGORITHM_A192GCM:
     case COSE_ALGORITHM_A256GCM:
         psa_algorithm = PSA_ALG_GCM;
+        break;
+
+    case COSE_ALGORITHM_AES128CCM_16_128:
+    case COSE_ALGORITHM_AES128CCM_64_128:
+    case COSE_ALGORITHM_AES256CCM_16_128:
+    case COSE_ALGORITHM_AES256CCM_64_128:
+        psa_algorithm = PSA_ALG_CCM;
         break;
 
     default:
