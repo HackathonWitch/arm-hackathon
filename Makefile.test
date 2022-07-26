@@ -16,10 +16,10 @@
 
 # ---- QCBOR location ----
 # Adjust this to the location of QCBOR in your build environment
-QCBOR_INC= -I ../../QCBOR/master/inc
-QCBOR_LIB=../../QCBOR/master/libqcbor.a
-#QCBOR_INC= -I/usr/include -I/usr/local/include
-#QCBOR_LIB= -l qcbor
+# QCBOR_INC= -I ../../QCBOR/master/inc
+# QCBOR_LIB=../../QCBOR/master/libqcbor.a
+QCBOR_INC= -I/usr/include -I/usr/local/include
+QCBOR_LIB= -l qcbor
 
 
 # ---- crypto configuration -----
@@ -60,7 +60,7 @@ libt_cose.so: $(SRC_OBJ) $(CRYPTO_OBJ)
 	cc $^ $(CFLAGS) -dead_strip -o $@ -shared $(QCBOR_LIB) $(CRYPTO_LIB)
 
 t_cose_test: main.o $(TEST_OBJ) libt_cose.a 
-	cc -o $@ $^ $(QCBOR_LIB) $(CRYPTO_LIB)
+	cc -o $@ $^ $(QCBOR_LIB) $(CRYPTO_LIB) -lm
 
 
 clean:
