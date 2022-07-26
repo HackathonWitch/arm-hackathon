@@ -31,17 +31,19 @@ static void print_bytestr(const uint8_t *bytes, size_t len)
 }
 
 /* PSKs */
-uint8_t psk[] = "aaaaaaaaaaaaaaaa";
-uint8_t psk2[] = "aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbb";
+uint8_t psk128[] = "aaaaaaaaaaaaaaaa";
+uint8_t psk192[] = "lilvishyisamazingthebest";
+uint8_t psk256[] = "aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbb";
 
 /* PSK IDs */
-uint8_t psk_kid[] = "kid-1";
+uint8_t psk_kid[] = "kid1";
 uint8_t psk2_kid[] = "kid-1a";
 
 /* Remove trailing null byte in the size calculations below */
-size_t psk_key_len = sizeof(psk)-1;
+size_t psk128_key_len = sizeof(psk128)-1;
+size_t psk192_key_len = sizeof(psk192)-1;
+size_t psk256_key_len = sizeof(psk256)-1;
 size_t psk_kid_len = sizeof(psk_kid)-1;
-size_t psk2_key_len = sizeof(psk2)-1;
 size_t psk2_kid_len = sizeof(psk2_kid)-1;
 
 /* Example ECC public key (P256r1) */
@@ -369,99 +371,46 @@ int main(void)
 
     /* -------------------------------------------------------------------------*/
 
-    printf("\n-- 1. Create COSE_Encrypt structure with detached payload --\n\n");
-    test_cose_encrypt(DETACHED_PAYLOAD,
-                      firmware, firmware_len,
-                      buffer, sizeof(buffer),
-                      &result_len,
-                      encrypted_firmware, encrypted_firmware_len,
-                      &encrypted_firmware_result_len,
-                      COSE_ALGORITHM_A128GCM,
-                      COSE_ALGORITHM_HPKE_P256_HKDF256_AES128_GCM
-                     );
-
-    printf("COSE: ");
-    print_bytestr(buffer, result_len);
-
-    printf("\n\nCiphertext: ");
-    print_bytestr(encrypted_firmware, encrypted_firmware_result_len);
-    printf("\n");
-
-    psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_DERIVE);
-    psa_set_key_algorithm(&attributes, PSA_ALG_ECDH);
-    psa_set_key_type(&attributes, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_R1));
-
-    status = psa_import_key(&attributes,
-                            private_key, sizeof(private_key),
-                            &key_handle);
-
-    if (status != PSA_SUCCESS) {
-        printf("psa_import_key failed\n");
-        return(EXIT_FAILURE);
-    }
-
-    t_cose_own_key.k.key_handle = key_handle;
-    t_cose_own_key.crypto_lib = T_COSE_CRYPTO_LIB_PSA;
-
-    t_cose_encrypt_dec_init(&dec_ctx, 0, T_COSE_KEY_DISTRIBUTION_HPKE);
-
-    t_cose_encrypt_dec_set_private_key(&dec_ctx, t_cose_own_key, kid2);
-
-    ret = t_cose_encrypt_dec(&dec_ctx,
+    printf("\n-- 128-GCM. Create COSE_Encrypt0 structure --\n\n");
+    res = test_cose_encrypt0(INCLUDED_PAYLOAD,
+                             firmware, firmware_len,
                              buffer, sizeof(buffer),
-                             encrypted_firmware, encrypted_firmware_result_len,
-                             plaintext, sizeof(plaintext),
-                             &plaintext_output_len);
+                             &result_len,
+                             encrypted_firmware, encrypted_firmware_len,
+                             &encrypted_firmware_result_len,
+                             psk128, psk128_key_len,
+                             COSE_ALGORITHM_A128GCM,
+                             (struct q_useful_buf_c) {psk_kid, psk_kid_len}
+                            );
 
-    if (ret != T_COSE_SUCCESS) {
-        printf("\nDecryption failed!\n");
+    if (res != 0) {
+        printf("\nEncryption failed!\n");
         return(EXIT_FAILURE);
     }
 
-    printf("\nPlaintext: ");
-    printf("%s\n", plaintext);
-
-    memset(buffer, 0, sizeof(buffer));
-    memset(encrypted_firmware, 0, encrypted_firmware_len);
-    memset(plaintext, 0, plaintext_output_len);
-    psa_destroy_key( key_handle );
-
-    /* -------------------------------------------------------------------------*/
-
-    printf("\n-- 2. Create COSE_Encrypt structure with included payload --\n\n");
-    test_cose_encrypt(INCLUDED_PAYLOAD,
-                      firmware, firmware_len,
-                      buffer, sizeof(buffer),
-                      &result_len,
-                      encrypted_firmware, encrypted_firmware_len,
-                      &encrypted_firmware_result_len,
-                      COSE_ALGORITHM_A128GCM,
-                      COSE_ALGORITHM_HPKE_P256_HKDF256_AES128_GCM
-                     );
-
     printf("COSE: ");
     print_bytestr(buffer, result_len);
-    printf("\n");
 
-    psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_DERIVE);
-    psa_set_key_algorithm(&attributes, PSA_ALG_ECDH);
-    psa_set_key_type(&attributes, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_R1));
+    psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_DECRYPT);
+    psa_set_key_algorithm(&attributes, PSA_ALG_GCM);
+    psa_set_key_type(&attributes, PSA_KEY_TYPE_AES);
+    psa_set_key_bits(&attributes, 128);
 
     status = psa_import_key(&attributes,
-                            private_key, sizeof(private_key),
+                            psk128, psk128_key_len,
                             &key_handle);
 
     if (status != PSA_SUCCESS) {
-        printf("Import of key failed\n");
+        printf("Importing key failed\n");
         return(EXIT_FAILURE);
     }
 
     t_cose_own_key.k.key_handle = key_handle;
     t_cose_own_key.crypto_lib = T_COSE_CRYPTO_LIB_PSA;
 
-    t_cose_encrypt_dec_init(&dec_ctx, 0, T_COSE_KEY_DISTRIBUTION_HPKE);
+    t_cose_encrypt_dec_init(&dec_ctx, 0, T_COSE_KEY_DISTRIBUTION_DIRECT);
 
-    t_cose_encrypt_dec_set_private_key(&dec_ctx, t_cose_own_key, kid2);
+    t_cose_encrypt_dec_set_private_key(&dec_ctx, t_cose_own_key, kid1);
 
     ret = t_cose_encrypt_dec(&dec_ctx,
                              buffer, sizeof(buffer),
@@ -484,15 +433,15 @@ int main(void)
 
     /* -------------------------------------------------------------------------*/
 
-    printf("\n-- 3. Create COSE_Encrypt0 structure with detached payload --\n\n");
-    res = test_cose_encrypt0(DETACHED_PAYLOAD,
+    printf("\n-- 192-GCM. Create COSE_Encrypt0 structure --\n\n");
+    res = test_cose_encrypt0(INCLUDED_PAYLOAD,
                              firmware, firmware_len,
                              buffer, sizeof(buffer),
                              &result_len,
                              encrypted_firmware, encrypted_firmware_len,
                              &encrypted_firmware_result_len,
-                             psk, psk_key_len,
-                             COSE_ALGORITHM_A128GCM,
+                             psk192, psk192_key_len,
+                             COSE_ALGORITHM_A192GCM,
                              (struct q_useful_buf_c) {psk_kid, psk_kid_len}
                             );
 
@@ -503,17 +452,14 @@ int main(void)
 
     printf("COSE: ");
     print_bytestr(buffer, result_len);
-    printf("\n\nCiphertext: ");
-    print_bytestr(encrypted_firmware, encrypted_firmware_result_len);
-    printf("\n");
 
     psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_DECRYPT);
     psa_set_key_algorithm(&attributes, PSA_ALG_GCM);
     psa_set_key_type(&attributes, PSA_KEY_TYPE_AES);
-    psa_set_key_bits(&attributes, 128);
+    psa_set_key_bits(&attributes, 192);
 
     status = psa_import_key(&attributes,
-                            psk, psk_key_len,
+                            psk192, psk192_key_len,
                             &key_handle);
 
     if (status != PSA_SUCCESS) {
@@ -530,7 +476,7 @@ int main(void)
 
     ret = t_cose_encrypt_dec(&dec_ctx,
                              buffer, sizeof(buffer),
-                             encrypted_firmware, encrypted_firmware_result_len,
+                             NULL, 0,
                              plaintext, sizeof(plaintext),
                              &plaintext_output_len);
 
@@ -549,71 +495,16 @@ int main(void)
 
     /* -------------------------------------------------------------------------*/
 
-    printf("\n-- 4. Create COSE_Encrypt0 structure with included payload --\n\n");
-    test_cose_encrypt0(INCLUDED_PAYLOAD,
-                       firmware, firmware_len,
-                       buffer, sizeof(buffer),
-                       &result_len,
-                       encrypted_firmware, encrypted_firmware_len,
-                       &encrypted_firmware_result_len,
-                       psk, psk_key_len,
-                       COSE_ALGORITHM_A128GCM,
-                       (struct q_useful_buf_c) {psk_kid, psk_kid_len}
-                      );
-
-    printf("COSE: ");
-    print_bytestr(buffer, result_len);
-    printf("\n");
-
-    psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_DECRYPT);
-    psa_set_key_algorithm(&attributes, PSA_ALG_GCM);
-    psa_set_key_type(&attributes, PSA_KEY_TYPE_AES);
-    psa_set_key_bits(&attributes, 128);
-
-    status = psa_import_key(&attributes, psk, psk_key_len, &key_handle);
-
-    if (status != PSA_SUCCESS) {
-        printf("Importing key failed\n");
-        return(EXIT_FAILURE);
-    }
-
-    t_cose_own_key.k.key_handle = key_handle;
-    t_cose_own_key.crypto_lib = T_COSE_CRYPTO_LIB_PSA;
-
-    t_cose_encrypt_dec_init(&dec_ctx, 0, T_COSE_KEY_DISTRIBUTION_DIRECT);
-    t_cose_encrypt_dec_set_private_key(&dec_ctx, t_cose_own_key, kid1);
-
-    ret = t_cose_encrypt_dec(&dec_ctx,
-                             buffer, sizeof(buffer),
-                             encrypted_firmware, encrypted_firmware_result_len,
-                             plaintext, sizeof(plaintext),
-                             &plaintext_output_len);
-
-    if (ret != T_COSE_SUCCESS) {
-        printf("\nDecryption failed!\n");
-        return(EXIT_FAILURE);
-    }
-
-    printf("\nPlaintext: ");
-    printf("%s\n", plaintext);
-
-    memset(buffer, 0, sizeof(buffer));
-    memset(encrypted_firmware, 0, encrypted_firmware_len);
-    memset(plaintext, 0, plaintext_output_len);
-    psa_destroy_key(key_handle);
-
-    /* -------------------------------------------------------------------------*/
-
-    printf("\n-- 5. Create COSE_Encrypt0 structure with detached payload (AES256-GCM) --\n\n");
-    res = test_cose_encrypt0(DETACHED_PAYLOAD,
+    printf("\n-- 256-GCM. Create COSE_Encrypt0 structure --\n\n");
+    res = test_cose_encrypt0(INCLUDED_PAYLOAD,
                              firmware, firmware_len,
                              buffer, sizeof(buffer),
                              &result_len,
                              encrypted_firmware, encrypted_firmware_len,
                              &encrypted_firmware_result_len,
-                             psk2, psk2_key_len,
+                             psk256, psk256_key_len,
                              COSE_ALGORITHM_A256GCM,
-                             (struct q_useful_buf_c) {psk2_kid, psk2_kid_len}
+                             (struct q_useful_buf_c) {psk_kid, psk_kid_len}
                             );
 
     if (res != 0) {
@@ -623,9 +514,6 @@ int main(void)
 
     printf("COSE: ");
     print_bytestr(buffer, result_len);
-    printf("\n\nCiphertext: ");
-    print_bytestr(encrypted_firmware, encrypted_firmware_result_len);
-    printf("\n");
 
     psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_DECRYPT);
     psa_set_key_algorithm(&attributes, PSA_ALG_GCM);
@@ -633,7 +521,7 @@ int main(void)
     psa_set_key_bits(&attributes, 256);
 
     status = psa_import_key(&attributes,
-                            psk2, psk2_key_len,
+                            psk256, psk256_key_len,
                             &key_handle);
 
     if (status != PSA_SUCCESS) {
@@ -646,11 +534,11 @@ int main(void)
 
     t_cose_encrypt_dec_init(&dec_ctx, 0, T_COSE_KEY_DISTRIBUTION_DIRECT);
 
-    t_cose_encrypt_dec_set_private_key(&dec_ctx, t_cose_own_key, kid3);
+    t_cose_encrypt_dec_set_private_key(&dec_ctx, t_cose_own_key, kid1);
 
     ret = t_cose_encrypt_dec(&dec_ctx,
                              buffer, sizeof(buffer),
-                             encrypted_firmware, encrypted_firmware_result_len,
+                             NULL, 0,
                              plaintext, sizeof(plaintext),
                              &plaintext_output_len);
 
@@ -669,29 +557,33 @@ int main(void)
 
     /* -------------------------------------------------------------------------*/
 
-    printf("\n-- 6. Create COSE_Encrypt0 structure with included payload (AES256-GCM) --\n\n");
-    test_cose_encrypt0(INCLUDED_PAYLOAD,
-                       firmware, firmware_len,
-                       buffer, sizeof(buffer),
-                       &result_len,
-                       encrypted_firmware, encrypted_firmware_len,
-                       &encrypted_firmware_result_len,
-                       psk2, psk2_key_len,
-                       COSE_ALGORITHM_A256GCM,
-                       (struct q_useful_buf_c) {psk2_kid, psk2_kid_len}
-                      );
+    printf("\n-- 128-CCM. Create COSE_Encrypt0 structure --\n\n");
+    res = test_cose_encrypt0(INCLUDED_PAYLOAD,
+                             firmware, firmware_len,
+                             buffer, sizeof(buffer),
+                             &result_len,
+                             encrypted_firmware, encrypted_firmware_len,
+                             &encrypted_firmware_result_len,
+                             psk128, psk128_key_len,
+                             COSE_ALGORITHM_AES128CCM_16_128,
+                             (struct q_useful_buf_c) {psk_kid, psk_kid_len}
+                            );
+
+    if (res != 0) {
+        printf("\nEncryption failed!\n");
+        return(EXIT_FAILURE);
+    }
 
     printf("COSE: ");
     print_bytestr(buffer, result_len);
-    printf("\n");
 
     psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_DECRYPT);
-    psa_set_key_algorithm(&attributes, PSA_ALG_GCM);
+    psa_set_key_algorithm(&attributes, PSA_ALG_CCM);
     psa_set_key_type(&attributes, PSA_KEY_TYPE_AES);
-    psa_set_key_bits(&attributes, 256);
+    psa_set_key_bits(&attributes, 128);
 
     status = psa_import_key(&attributes,
-                            psk2, psk2_key_len,
+                            psk128, psk128_key_len,
                             &key_handle);
 
     if (status != PSA_SUCCESS) {
@@ -704,11 +596,11 @@ int main(void)
 
     t_cose_encrypt_dec_init(&dec_ctx, 0, T_COSE_KEY_DISTRIBUTION_DIRECT);
 
-    t_cose_encrypt_dec_set_private_key(&dec_ctx, t_cose_own_key, kid3);
+    t_cose_encrypt_dec_set_private_key(&dec_ctx, t_cose_own_key, kid1);
 
     ret = t_cose_encrypt_dec(&dec_ctx,
                              buffer, sizeof(buffer),
-                             encrypted_firmware, encrypted_firmware_result_len,
+                             NULL, 0,
                              plaintext, sizeof(plaintext),
                              &plaintext_output_len);
 
@@ -724,6 +616,5 @@ int main(void)
     memset(encrypted_firmware, 0, encrypted_firmware_len);
     memset(plaintext, 0, plaintext_output_len);
     psa_destroy_key(key_handle);
-
     return(0);
 }
